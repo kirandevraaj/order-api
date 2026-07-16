@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: order-api-deployment
-  namespace: production      # Targets the Terraform-managed production environment
+  namespace: production
   labels:
     app: order-api
 spec:
@@ -20,7 +20,7 @@ spec:
       labels:
         app: order-api
     spec:
-      serviceAccountName: jenkins-deployer-sa  # Runs under Terraform's CI/CD identity
+      serviceAccountName: jenkins-deployer-sa
       containers:
       - name: order-api
         image: kirandevraaj/order-api:latest
@@ -30,6 +30,15 @@ spec:
         env:
         - name: APP_VERSION
           value: "v1.0.0"
+        # -- ADD THIS RESOURCES BLOCK TO SATISFY TERRAFORM QUOTA --
+        resources:
+          requests:
+            cpu: "100m"      # Request 0.1 CPU core
+            memory: "128Mi"  # Request 128 MB Memory
+          limits:
+            cpu: "500m"      # Cap at 0.5 CPU core
+            memory: "256Mi"  # Cap at 256 MB Memory
+        # ---------------------------------------------------------
         livenessProbe:
           httpGet:
             path: /health
