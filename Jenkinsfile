@@ -36,41 +36,33 @@ pipeline {
             steps {
                 echo "Deploying manifests to K8s cluster via secure Bastion gateway..."
                 sh """
-                    # Create a temporary build-specific directory on the Bastion
                     ssh -o StrictHostKeyChecking=no ${BASTION_HOST} 'mkdir -p ~/k8s-deploy-${BUILD_NUMBER}'
-                    
-                    # Securely copy Kubernetes manifests from Jenkins over to the Bastion
                     scp -o StrictHostKeyChecking=no -r k8s/* ${BASTION_HOST}:~/k8s-deploy-${BUILD_NUMBER}/
-                    
-                    # Apply the manifests and update the running deployment image tag
                     ssh -o StrictHostKeyChecking=no ${BASTION_HOST} 'kubectl apply -f ~/k8s-deploy-${BUILD_NUMBER}/'
-                    ssh -o StrictHostKeyChecking=no ${BASTION_HOST} 'kubectl set image deployment/order-api-deployment order-api=${DOCKER_IMAGE}:${IMAGE_TAG}'
+                    ssh -o StrictHostKeyChecking=no ${BASTION_HOST} 'kubectl set image deployment/order-api-deployment order-api=${DOCKER_IMAGE}:${IMAGE_TAG} -n production'
                 """
             }
         }
 
         stage('4. Verify Rollout & Auto-Rollback') {
             steps {
-                echo "Verifying zero-downtime deployment rollout status..."
+                echo "Verifying zero-downtime deployment rollout status in production namespace..."
                 script {
                     try {
-                        // Wait up to 60 seconds for K8s readiness probes to pass on new pods
                         sh """
-                            ssh -o StrictHostKeyChecking=no ${BASTION_HOST} 'kubectl rollout status deployment/order-api-deployment --timeout=60s'
+                            ssh -o StrictHostKeyChecking=no ${BASTION_HOST} 'kubectl rollout status deployment/order-api-deployment -n production --timeout=60s'
                         """
-                        echo "Deployment successful! Service is online with healthy pods."
+                        echo "Deployment successful! Service is online with healthy pods in production."
                     } catch (Exception e) {
                         echo "CRITICAL: Rollout failed or timed out! Initiating automated rollback..."
-                        // Instantly revert Kubernetes deployment to the previous stable ReplicaSet
                         sh """
-                            ssh -o StrictHostKeyChecking=no ${BASTION_HOST} 'kubectl rollout undo deployment/order-api-deployment'
+                            ssh -o StrictHostKeyChecking=no ${BASTION_HOST} 'kubectl rollout undo deployment/order-api-deployment -n production'
                         """
-                        error("Pipeline failed: New application version failed health checks. Automated rollback to previous stable release completed successfully.")
+                        error("Pipeline failed: New application version failed health checks. Automated rollback completed successfully.")
                     }
                 }
             }
         }
-    }
     
     // Clean up temporary manifest folders on the Bastion after every run
     post {

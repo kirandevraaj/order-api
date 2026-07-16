@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: order-api-deployment
+  namespace: production      # Targets the Terraform-managed production environment
   labels:
     app: order-api
 spec:
@@ -9,8 +10,8 @@ spec:
   strategy:
     type: RollingUpdate
     rollingUpdate:
-      maxSurge: 1        # Allow 1 extra pod to spin up during deployment
-      maxUnavailable: 0  # Guarantee NO existing pods terminate until the new pod is healthy
+      maxSurge: 1
+      maxUnavailable: 0
   selector:
     matchLabels:
       app: order-api
@@ -19,9 +20,9 @@ spec:
       labels:
         app: order-api
     spec:
+      serviceAccountName: jenkins-deployer-sa  # Runs under Terraform's CI/CD identity
       containers:
       - name: order-api
-        # Notice this points to YOUR Docker Hub namespace!
         image: kirandevraaj/order-api:latest
         imagePullPolicy: Always
         ports:
@@ -29,14 +30,12 @@ spec:
         env:
         - name: APP_VERSION
           value: "v1.0.0"
-        # If this probe fails, K8s restarts the container automatically
         livenessProbe:
           httpGet:
             path: /health
             port: 5000
           initialDelaySeconds: 10
           periodSeconds: 5
-        # If this probe fails during rollout, K8s halts the deployment!
         readinessProbe:
           httpGet:
             path: /health
