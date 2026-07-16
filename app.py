@@ -19,10 +19,8 @@ def home():
 # A return status code of 200 tells K8s everything is running normally.
 @app.route("/health")
 def health_check():
-    return jsonify({
-        "status": "healthy", 
-        "engine": "python-flask"
-    }), 200
+    # Intentionally returning 500 to simulate a critical application crash!
+    return jsonify({"status": "CRITICAL FAILURE"}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
