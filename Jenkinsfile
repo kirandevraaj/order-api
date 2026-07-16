@@ -54,14 +54,14 @@ pipeline {
                 echo "Verifying zero-downtime deployment rollout status..."
                 script {
                     try {
-                        # Wait up to 60 seconds for K8s readiness probes to pass on new pods
+                        // Wait up to 60 seconds for K8s readiness probes to pass on new pods
                         sh """
                             ssh -o StrictHostKeyChecking=no ${BASTION_HOST} 'kubectl rollout status deployment/order-api-deployment --timeout=60s'
                         """
                         echo "Deployment successful! Service is online with healthy pods."
                     } catch (Exception e) {
                         echo "CRITICAL: Rollout failed or timed out! Initiating automated rollback..."
-                        # Instantly revert Kubernetes deployment to the previous stable ReplicaSet
+                        // Instantly revert Kubernetes deployment to the previous stable ReplicaSet
                         sh """
                             ssh -o StrictHostKeyChecking=no ${BASTION_HOST} 'kubectl rollout undo deployment/order-api-deployment'
                         """
