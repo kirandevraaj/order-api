@@ -63,6 +63,7 @@ pipeline {
                 }
             }
         }
+    } // <-- THIS WAS THE MISSING BRACE TO CLOSE 'stages'
     
     // Clean up temporary manifest folders on the Bastion after every run
     post {
